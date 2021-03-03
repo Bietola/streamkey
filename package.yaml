@@ -25,6 +25,7 @@ dependencies:
 - transformers
 - optparse-applicative
 - turtle
+- X11
 
 library:
   source-dirs: src
