@@ -3,34 +3,46 @@
 
 module RecordKeys (recordKeys) where
 
+import Prelude hiding (log)
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
+import Data.Bits
+import Text.Printf
 
 import Graphics.X11 as X
+import Graphics.X11.Xlib.Extras as X
 
 recordKeys :: IO ()
 recordKeys = do
   dsp <- X.openDisplay ""
-  print "Display opened"
+  printf "Display opened successfully\n"
 
-  let whiteColor = whitePixel dsp (X.defaultScreen dsp)
-  let blackColor = blackPixel dsp (X.defaultScreen dsp)
+  grabStatus <-
+    X.grabKeyboard
+      dsp
+      (X.defaultRootWindow dsp)
+      True
+      X.grabModeAsync
+      X.grabModeAsync
+      X.currentTime
+  
+  case grabStatus of
+    st
+      | st == X.alreadyGrabbed -> error "Keyboard already grabbed"
+      | st == X.grabNotViewable -> error "Grab window not viewable"
+      | st == X.grabFrozen -> error "Keyboard is frozen"
+      | st == X.grabInvalidTime -> error "Invalid grab time"
 
-  win <- X.createSimpleWindow dsp (X.defaultRootWindow dsp) 0 0 200 100 0 blackColor blackColor
+    _ -> printf "Keyboard grab successful!\n"
 
-  X.selectInput dsp win X.keyPressMask
-
-  X.mapWindow dsp win
-
-  gc <- X.createGC dsp win
-
-  X.setForeground dsp gc whiteColor
-
-  X.allocaXEvent \eptr -> forever do
-    print "Waiting for event..."
+  X.allocaXEvent \eptr -> forever $ do
     X.nextEvent dsp eptr
 
-    print "Got it!"
-    eventType <- X.get_EventType eptr
-    print eventType
+    etype <- X.get_EventType eptr
+
+    printf "%d\n" etype
+
+    (inputFocus, _) <- X.getInputFocus dsp
+    let emptyMask = 0
+    X.sendEvent dsp inputFocus True (X.keyPressMask .|. X.keyReleaseMask) eptr

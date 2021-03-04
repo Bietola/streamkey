@@ -26,6 +26,7 @@ dependencies:
 - optparse-applicative
 - turtle
 - X11
+- text
 
 library:
   source-dirs: src
