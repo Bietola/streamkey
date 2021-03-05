@@ -25,14 +25,13 @@ dependencies:
 - transformers
 - optparse-applicative
 - turtle
-- X11
 - text
 
 library:
   source-dirs: src
 
 executables:
-  streamkey-exe:
+  streamk:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
