@@ -3,15 +3,12 @@
 
 module RecordKeys (recordKeys) where
 
-import Prelude hiding (log)
-
 import Turtle
-import Text.Printf
 
 recordKeys :: IO ()
 recordKeys = sh do
-  key <- recordKeysRaw
-  echo key
+  line <- inshell "pystreamk-record" empty
+  echo line
 
 recordKeysRaw :: Shell Line
 recordKeysRaw = do
