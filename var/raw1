@@ -1,0 +1,60 @@
+{"event_type": "down", "scan_code": 125, "time": 1615217590.420439, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "windows"}
+{"event_type": "down", "scan_code": 42, "time": 1615217590.428885, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "shift"}
+{"event_type": "down", "scan_code": 35, "time": 1615217590.541004, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "h"}
+{"event_type": "up", "scan_code": 35, "time": 1615217590.606066, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "h"}
+{"event_type": "up", "scan_code": 42, "time": 1615217590.676642, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "shift"}
+{"event_type": "up", "scan_code": 125, "time": 1615217590.691186, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "windows"}
+{"event_type": "down", "scan_code": 125, "time": 1615217591.097686, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "windows"}
+{"event_type": "down", "scan_code": 42, "time": 1615217591.17927, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "shift"}
+{"event_type": "down", "scan_code": 28, "time": 1615217591.263214, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "enter"}
+{"event_type": "up", "scan_code": 28, "time": 1615217591.341841, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "enter"}
+{"event_type": "up", "scan_code": 42, "time": 1615217591.391701, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "shift"}
+{"event_type": "up", "scan_code": 125, "time": 1615217591.418891, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "windows"}
+{"event_type": "down", "scan_code": 125, "time": 1615217591.703338, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "windows"}
+{"event_type": "down", "scan_code": 42, "time": 1615217591.706714, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "shift"}
+{"event_type": "down", "scan_code": 38, "time": 1615217591.904267, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "l"}
+{"event_type": "up", "scan_code": 38, "time": 1615217591.98699, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "l"}
+{"event_type": "up", "scan_code": 42, "time": 1615217592.016157, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["shift", "windows"], "name": "shift"}
+{"event_type": "up", "scan_code": 125, "time": 1615217592.041744, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "windows"}
+{"event_type": "down", "scan_code": 38, "time": 1615217592.170779, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "up", "scan_code": 38, "time": 1615217592.244283, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 37, "time": 1615217592.418828, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 37, "time": 1615217592.555868, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "down", "scan_code": 36, "time": 1615217592.590087, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "up", "scan_code": 36, "time": 1615217592.710857, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "down", "scan_code": 37, "time": 1615217592.754368, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "down", "scan_code": 36, "time": 1615217592.863808, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "up", "scan_code": 37, "time": 1615217592.873228, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 36, "time": 1615217592.958869, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "down", "scan_code": 38, "time": 1615217592.982912, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 37, "time": 1615217593.08561, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 38, "time": 1615217593.126793, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 36, "time": 1615217593.182545, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "up", "scan_code": 37, "time": 1615217593.201199, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 36, "time": 1615217593.262505, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "down", "scan_code": 38, "time": 1615217593.299734, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 37, "time": 1615217593.375399, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 38, "time": 1615217593.427832, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 36, "time": 1615217593.471491, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "up", "scan_code": 37, "time": 1615217593.494812, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 36, "time": 1615217593.546489, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "down", "scan_code": 58, "time": 1615217593.567321, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "caps lock"}
+{"event_type": "up", "scan_code": 58, "time": 1615217593.646148, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "caps lock"}
+{"event_type": "down", "scan_code": 38, "time": 1615217593.677403, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 37, "time": 1615217593.755971, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "up", "scan_code": 38, "time": 1615217593.799064, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "l"}
+{"event_type": "down", "scan_code": 36, "time": 1615217593.865936, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "up", "scan_code": 36, "time": 1615217593.879956, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "j"}
+{"event_type": "up", "scan_code": 37, "time": 1615217593.885792, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "k"}
+{"event_type": "down", "scan_code": 58, "time": 1615217594.379757, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "caps lock"}
+{"event_type": "up", "scan_code": 58, "time": 1615217594.439059, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "caps lock"}
+{"event_type": "down", "scan_code": 32, "time": 1615217594.504449, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "d"}
+{"event_type": "up", "scan_code": 32, "time": 1615217594.583446, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "d"}
+{"event_type": "down", "scan_code": 32, "time": 1615217594.669723, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "d"}
+{"event_type": "up", "scan_code": 32, "time": 1615217594.725588, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "d"}
+{"event_type": "down", "scan_code": 125, "time": 1615217595.035153, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "windows"}
+{"event_type": "down", "scan_code": 15, "time": 1615217595.063015, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "tab"}
+{"event_type": "up", "scan_code": 125, "time": 1615217595.124681, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["windows"], "name": "windows"}
+{"event_type": "up", "scan_code": 15, "time": 1615217595.143368, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "tab"}
+{"event_type": "down", "scan_code": 29, "time": 1615217595.658542, "device": "/dev/input/event2", "is_keypad": false, "modifiers": [], "name": "ctrl"}
+{"event_type": "down", "scan_code": 46, "time": 1615217595.820696, "device": "/dev/input/event2", "is_keypad": false, "modifiers": ["ctrl"], "name": "c"}
