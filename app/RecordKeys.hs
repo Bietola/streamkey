@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module RecordKeys
   (recordKeys
@@ -16,52 +17,37 @@ module RecordKeys
 import Data.Char as C
 import GHC.Generics
 
-import Data.Vector
+import Data.Vector as V
 import Data.Text as T
 import Debug.Trace
 import Data.Aeson
 import Data.Aeson.Types
-import Turtle
+import Turtle hiding (Parser)
 
 -- Corpus Processing Functions
 
 data KeyMod = Alt | Ctrl | Super | Shift
-  deriving (Show, Read, Generic)
-
-instance FromJSON KeyMod
+  deriving (Show, Read)
 
 data KeyEvent = KeyEvent {
       scancode  :: Int
-    , modifiers :: [KeyMod]
+    , modifiers :: V.Vector KeyMod
     } deriving Show
 
-parseRawKeyMod jsonStr = do
-  json <- eitherDecode $ fromString jsonStr
-
-  case json of
-    String modStr -> return $ read $ (\x -> trace x x) $ repr $ capitalize modStr
-    _ -> Left "Json KeyMod should be a string."
-
+parseRawKeyMod :: Value -> Parser KeyMod
+parseRawKeyMod = withText "" $ \rawMod ->
+  return $ read $ repr $ capitalize rawMod
   where capitalize txt = case T.uncons txt of
-                           Nothing -> T.empty
-                           Just (x, xs) -> T.cons (C.toUpper x) xs
+                             Nothing -> T.empty
+                             Just (x, xs) -> T.cons (C.toUpper x) xs
 
-
-parseRawKeyEvent :: String -> Either String KeyEvent
-parseRawKeyEvent jsonStr = do
-  json <- eitherDecode $ fromString jsonStr
-
-  flip parseEither json $ \root -> do
+parseRawKeyEvent :: Value -> Parser KeyEvent
+parseRawKeyEvent = do
+  withObject "" $ \root -> do
     scancode  <- root .: "scan_code"
-    (modifiers :: Array) <- root .: "modifiers"
+    modifiers <- root .: "modifiers" >>= V.mapM parseRawKeyMod
 
-    -- TODO: Find way to turn list of eithers into either of a list
-    keymods <- toList $ parseRawKeyMod <$> modifiers
-
-    return $ KeyEvent
-      scancode
-      (toList $ parseRawKeyMod <$> modifiers)
--- Terminal command
+    return $ KeyEvent{..}
 
 recordKeysRaw :: Shell Line
 recordKeysRaw =
