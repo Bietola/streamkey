@@ -40,7 +40,9 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 
-extra-deps: []
+extra-deps:
+  - break-1.0.2@sha256:dd0615d3abb228afd5c3d4e639fe2e212dfc1fd8819629c625f8b159e514e940,840
+  - transformers-either-0.1.1@sha256:ec3d6fefd90e243b51aecebfc0ebc5db6381c261d473ea2df7ed7b501a8fb961,1501
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

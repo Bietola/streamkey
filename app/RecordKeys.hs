@@ -47,7 +47,7 @@ parseRawKeyEvent = do
     scancode  <- root .: "scan_code"
     modifiers <- root .: "modifiers" >>= V.mapM parseRawKeyMod
 
-    return $ KeyEvent{..}
+    return KeyEvent{..}
 
 recordKeysRaw :: Shell Line
 recordKeysRaw =
