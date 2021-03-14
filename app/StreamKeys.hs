@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedLists #-}
 
 module StreamKeys (streamKeys) where
 
@@ -10,11 +11,17 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State.Strict
+import Data.Either
 import Control.Break
+import GHC.Exts
 
 import Data.Maybe
+import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Text.Printf as T
 import qualified Turtle as SH
+
+import qualified XDoCom
 
 unescapeDasherKey key
   | key == "<lt>" = "<"
@@ -28,40 +35,57 @@ parseDasherKeyEvent = listToMaybe . SH.match do
   ")"
   return $ unescapeDasherKey $ SH.fromString key
 
-pressKey :: T.Text -> IO ()
-pressKey key = SH.sh do
-  let command = "xdotool key " <> key
-  SH.shells command SH.empty
-
 streamKeys :: IO ()
 streamKeys =
-  let liftIO = lift
-      log = liftIO . print
-      -- ignore = flip (>>) $ return ()
-      -- lput = lift . put
-      -- lget = lift get
+  streamKeysRec
+  where
+    streamKeysRec :: IO ()
+    streamKeysRec = do
+      line <- T.pack <$> getLine
 
-  in forever $ flip evalStateT T.empty do
-    line <- T.pack <$> liftIO getLine
+      case parseDasherKeyEvent line of
+        Nothing -> do
+          T.printf "Ignoring invalid key event: %s\n" line
+          streamKeysRec
 
-    key <- maybe A.empty
-             return
-             (parseDasherKeyEvent line)
+        Just key -> do
+          T.printf "Processing text from dasher: %s\n" key
 
-    log $ "Processing text from dasher: " <> key
+          if key == "<"
+            then do
+              print "Initiating escape"
+              streamWithEscape T.empty
 
-    keyBuffer <- (<>key) <$> get
-    log $ "Updated buffer: " <> keyBuffer
+          else do
+            T.printf "Pressing keys: %s\n" key
+            XDoCom.pressKeys key
+            streamKeysRec
 
-    if keyBuffer == "<!cr!>"
-       then do
-         put ""
-         liftIO $ pressKey "Return"
-    else if keyBuffer `T.isPrefixOf` "<!cr!>"
-       then do
-         log $ "Caching for <!cr!>: " <> keyBuffer
-         put keyBuffer
-    else do
-      log $ "Pressing key: " <> key
-      liftIO $ pressKey key
-      put ""
+    streamWithEscape :: Text -> IO ()
+    streamWithEscape buffer = do
+      line <- T.pack <$> getLine
+
+      case parseDasherKeyEvent line of
+        Nothing -> do
+          T.printf "Ignoring invalid key event: %s\n" line
+          streamWithEscape buffer
+
+        Just key -> do
+          T.printf "Processing text from dasher: %s\n" key
+
+          if key == ">"
+            then do
+              T.printf "Finalizing escape: %s" buffer
+
+              -- TODO: Simplify after proper logging
+              either
+                -- (T.printf "Error parsing escape sequence: %s")
+                print
+                (XDoCom.execute >=> either print print)
+                (XDoCom.parse buffer)
+
+              streamKeysRec
+
+          else do
+            T.printf "Caching keys: %s\n" key
+            streamWithEscape $ buffer <> key

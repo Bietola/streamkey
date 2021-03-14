@@ -25,7 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      XDoCom
   other-modules:
       Paths_streamkey
   hs-source-dirs:
@@ -34,6 +34,7 @@ library
       aeson
     , base >=4.7 && <5
     , break
+    , foldl
     , mtl
     , optparse-applicative
     , text
@@ -56,6 +57,7 @@ executable streamk
       aeson
     , base >=4.7 && <5
     , break
+    , foldl
     , mtl
     , optparse-applicative
     , streamkey
@@ -78,6 +80,7 @@ test-suite streamkey-test
       aeson
     , base >=4.7 && <5
     , break
+    , foldl
     , mtl
     , optparse-applicative
     , streamkey
