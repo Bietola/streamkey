@@ -34,9 +34,11 @@ library
       aeson
     , base >=4.7 && <5
     , break
+    , exceptions
     , foldl
     , mtl
     , optparse-applicative
+    , sdl2
     , text
     , transformers
     , transformers-either
@@ -57,9 +59,11 @@ executable streamk
       aeson
     , base >=4.7 && <5
     , break
+    , exceptions
     , foldl
     , mtl
     , optparse-applicative
+    , sdl2
     , streamkey
     , text
     , transformers
@@ -80,9 +84,11 @@ test-suite streamkey-test
       aeson
     , base >=4.7 && <5
     , break
+    , exceptions
     , foldl
     , mtl
     , optparse-applicative
+    , sdl2
     , streamkey
     , text
     , transformers

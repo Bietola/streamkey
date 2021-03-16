@@ -1,11 +1,14 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module XDoCom where
 
 import Data.String
 import Data.Text (Text)
 import qualified Data.Text as T
+import Control.Exception hiding (catch)
+import Control.Monad.Catch
 import Control.Foldl as Fold
 import qualified Turtle as Sh
 
@@ -14,13 +17,17 @@ data XDoCom = Key Text | Nil
 type Result a = Either String a
 
 execute :: XDoCom -> IO (Result String)
-execute (Key key) = undefined <$> lines do
-  let command = "xdotool key " <> key
-  -- TODO/CC: Lean about exceptions and turn the one thrown
-  Sh.inshell command Sh.empty
-    -- TODO/CC: Figure out wtf this is...
-    where lines = Sh.single $ flip fold Fold.list
-execute _ = error "WIP"
+execute (Key key) = let
+  lines = Sh.single . flip (Sh.fold @Sh.Shell) Fold.list
+  try =
+    Right . show <$> lines do
+      let command = "xdotool key " <> key
+      Sh.inshell command Sh.empty
+  in try `catch`
+    \(SomeException e) -> return $ Left $ show e
+
+-- TODO: WIP
+execute _ = undefined
 
 parse :: IsString s => s -> Result XDoCom
 parse = undefined

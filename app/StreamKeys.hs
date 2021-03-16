@@ -23,32 +23,42 @@ import qualified Turtle as SH
 
 import qualified XDoCom
 
-unescapeDasherKey key
-  | key == "<lt>" = "<"
-  | key == "<gt>" = ">"
-  | otherwise = key
+-- TODO
+dasherKeyToXKey = unescapeDasherKey
+  where 
+    unescapeDasherKey key
+      | key == "<lt>" = "<"
+      | key == "<gt>" = ">"
+      | otherwise = key
 
 parseDasherKeyEvent :: T.Text -> Maybe T.Text
 parseDasherKeyEvent = listToMaybe . SH.match do
   "Key("
   key <- SH.selfless $ SH.many SH.dot
   ")"
-  return $ unescapeDasherKey $ SH.fromString key
+  return $ SH.fromString key
 
 streamKeys :: IO ()
 streamKeys =
   streamKeysRec
   where
+    -- TODO: Remove the need for this with logging?
+    maybeParseKeyEvent :: Text -> IO () -> (Text -> IO ()) -> IO ()
+    maybeParseKeyEvent rawLine onFail onOk = 
+      case parseDasherKeyEvent rawLine of
+        Nothing -> do
+          T.printf "Ignoring invalid key event: %s\n" rawLine
+          onFail
+
+        Just key -> onOk key
+
     streamKeysRec :: IO ()
     streamKeysRec = do
       line <- T.pack <$> getLine
 
-      case parseDasherKeyEvent line of
-        Nothing -> do
-          T.printf "Ignoring invalid key event: %s\n" line
-          streamKeysRec
-
-        Just key -> do
+      maybeParseKeyEvent line
+        streamKeysRec $
+        \key -> do
           T.printf "Processing text from dasher: %s\n" key
 
           if key == "<"
@@ -57,20 +67,17 @@ streamKeys =
               streamWithEscape T.empty
 
           else do
-            T.printf "Pressing keys: %s\n" key
-            XDoCom.pressKeys key
+            T.printf "Pressing key: %s\n" key
+            XDoCom.pressKey $ dasherKeyToXKey key
             streamKeysRec
 
     streamWithEscape :: Text -> IO ()
     streamWithEscape buffer = do
       line <- T.pack <$> getLine
 
-      case parseDasherKeyEvent line of
-        Nothing -> do
-          T.printf "Ignoring invalid key event: %s\n" line
-          streamWithEscape buffer
-
-        Just key -> do
+      maybeParseKeyEvent line
+        (streamWithEscape buffer) $
+        \key -> do
           T.printf "Processing text from dasher: %s\n" key
 
           if key == ">"

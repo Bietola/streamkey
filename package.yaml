@@ -24,6 +24,7 @@ dependencies:
 - text
 - foldl
 - vector
+- exceptions
 - mtl
 - transformers
 - transformers-either
@@ -31,6 +32,7 @@ dependencies:
 - aeson
 - optparse-applicative
 - turtle
+- sdl2
 
 library:
   source-dirs: src

@@ -9,9 +9,6 @@
 module RecordKeys
   (recordKeys
   -- DB
-  , KeyEvent
-  , parseRawKeyEvent
-  , KeyMod
   ) where
 
 import Data.Char as C
