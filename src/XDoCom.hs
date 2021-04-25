@@ -12,6 +12,8 @@ import Control.Monad.Catch
 import Control.Foldl as Fold
 import qualified Turtle as Sh
 
+debugMode = True
+
 data XDoCom = Key Text | Nil
 
 type Result a = Either String a
@@ -21,6 +23,7 @@ execute (Key key) = let
   lines = Sh.single . flip (Sh.fold @Sh.Shell) Fold.list
   try =
     Right . show <$> lines do
+      Sh.when debugMode $ Sh.echo $ Sh.repr $ "xdotool key " <> key
       let command = "xdotool key " <> key
       Sh.inshell command Sh.empty
   in try `catch`

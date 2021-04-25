@@ -5,6 +5,11 @@ module Main where
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Maybe
 
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Text.Printf as T
+
 import Options.Applicative
 
 import Turtle
@@ -12,17 +17,14 @@ import Turtle
 import StreamKeys
 import RecordKeys
 
--- Convert special keycodes to xdotool keycodes
-keycode2xdotool :: String -> Maybe String
-keycode2xdotool keycode =
-  case keycode of
-    "<cr>"    -> Just "Return"
-    "<tab>"   -> Just "Tab"
-    "<super>" -> Just "Super"
-    "<ctrl>"  -> Just "Ctrl"
-    "<meta>"  -> Just "Meta"
-    "<bs>"    -> Just "BackSpace"
-    _         -> Nothing
+-- Get unicode escape code of given Text
+encodeUnicode16 :: Text -> [Text]
+encodeUnicode16 = T.foldl (\s c -> s ++ escapeChar c) []
+  where
+    escapeChar c
+        | 'a' <= c && c <= 'z' = [T.singleton c]
+        | otherwise =
+            [T.pack $ T.printf "U%04x" (fromEnum c)]
 
 -- `Record` keys or `Stream` them from stdin into keyboard events
 data SubCommand = Record | Stream

@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedLists #-}
 
 module StreamKeys (streamKeys) where
 
@@ -17,19 +16,29 @@ import GHC.Exts
 
 import Data.Maybe
 import Data.Text (Text)
+import qualified Data.Text.IO as T
 import qualified Data.Text as T
 import qualified Text.Printf as T
 import qualified Turtle as SH
 
 import qualified XDoCom
 
+-- Get unicode escape code of given Text
+encodeUnicode16 :: Text -> [Text]
+encodeUnicode16 = T.foldl (\s c -> s ++ escapeChar c) []
+  where
+    escapeChar c = [T.pack $ T.printf "U%04x" (fromEnum c)]
+
 -- TODO
-dasherKeyToXKey = unescapeDasherKey
-  where 
-    unescapeDasherKey key
-      | key == "<lt>" = "<"
-      | key == "<gt>" = ">"
-      | otherwise = key
+dasherKeyCodeToXCode :: T.Text -> T.Text
+dasherKeyCodeToXCode key
+  | key == "<lt>" = "<"
+  | key == "<gt>" = ">"
+  | key == "<bs>" = "BackSpace"
+  | key == "<cr>" = "Return"
+  | key == "<tab>" = "Tab"
+  | key == " " = "KP_Space"
+  | otherwise = head $ encodeUnicode16 key
 
 parseDasherKeyEvent :: T.Text -> Maybe T.Text
 parseDasherKeyEvent = listToMaybe . SH.match do
@@ -68,7 +77,7 @@ streamKeys =
 
           else do
             T.printf "Pressing key: %s\n" key
-            XDoCom.pressKey $ dasherKeyToXKey key
+            XDoCom.pressKey $ dasherKeyCodeToXCode key
             streamKeysRec
 
     streamWithEscape :: Text -> IO ()
@@ -82,14 +91,18 @@ streamKeys =
 
           if key == ">"
             then do
-              T.printf "Finalizing escape: %s" buffer
+              let finalBuffer = T.concat ["<", buffer, ">"]
 
-              -- TODO: Simplify after proper logging
-              either
-                -- (T.printf "Error parsing escape sequence: %s")
-                print
-                (XDoCom.execute >=> either print print)
-                (XDoCom.parse buffer)
+              T.printf "Finalizing escape: %s" finalBuffer
+
+              -- TODO: Bring this back instead of following
+              -- -- TODO: Simplify after proper logging
+              -- either
+              --   -- (T.printf "Error parsing escape sequence: %s")
+              --   print
+              --   (XDoCom.execute >=> either print print)
+              --   (XDoCom.parse buffer)
+              XDoCom.pressKey $ dasherKeyCodeToXCode finalBuffer
 
               streamKeysRec
 
