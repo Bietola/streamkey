@@ -47,9 +47,29 @@ parseDasherKeyEvent = listToMaybe . SH.match do
   ")"
   return $ SH.fromString key
 
+-- TODO: Implement
+isDasherEscapeSeq _ = True
+
+pressDasherKey :: [Text] -> Text -> IO ()
+pressDasherKey history key =
+  -- TODO: Handle error using better version of commented out code below
+  -- -- TODO: Simplify after proper logging
+  -- -- either
+  --   -- (T.printf "Error parsing escape sequence: %s")
+  --   print
+  --   (XDoCom.execute >=> either print print)
+  --   (XDoCom.parse escapeSeq)
+  void $ if key == "<bs>" && isDasherEscapeSeq (head history)
+    then
+      -- TODO: Use `StateT`
+      -- ignoreBackspaces = ???
+      XDoCom.pressKey "BackSpace"
+    else
+      XDoCom.pressKey $ dasherKeyCodeToXCode key
+
 streamKeys :: IO ()
 streamKeys =
-  streamKeysRec
+  streamKeysRec []
   where
     -- TODO: Remove the need for this with logging?
     maybeParseKeyEvent :: Text -> IO () -> (Text -> IO ()) -> IO ()
@@ -61,51 +81,47 @@ streamKeys =
 
         Just key -> onOk key
 
-    streamKeysRec :: IO ()
-    streamKeysRec = do
+    streamKeysRec :: [Text] -> IO ()
+    streamKeysRec history = do
       line <- T.pack <$> getLine
 
       maybeParseKeyEvent line
-        streamKeysRec $
+        -- on parse fail
+        (streamKeysRec history) 
+        -- on parse ok
         \key -> do
           T.printf "Processing text from dasher: %s\n" key
 
           if key == "<"
             then do
               print "Initiating escape"
-              streamWithEscape T.empty
+              streamWithEscape history T.empty
 
           else do
             T.printf "Pressing key: %s\n" key
-            XDoCom.pressKey $ dasherKeyCodeToXCode key
-            streamKeysRec
+            pressDasherKey history key
+            streamKeysRec $ key : history
 
-    streamWithEscape :: Text -> IO ()
-    streamWithEscape buffer = do
+    streamWithEscape :: [Text] -> Text -> IO ()
+    streamWithEscape history escapeSeq = do
       line <- T.pack <$> getLine
 
       maybeParseKeyEvent line
-        (streamWithEscape buffer) $
+        -- on parse fail
+        (streamWithEscape history escapeSeq)
+        -- on parse ok
         \key -> do
           T.printf "Processing text from dasher: %s\n" key
 
           if key == ">"
             then do
-              let finalBuffer = T.concat ["<", buffer, ">"]
+              let escapeSeq' = T.concat ["<", escapeSeq, ">"]
 
-              T.printf "Finalizing escape: %s" finalBuffer
+              T.printf "Finalizing escape: <%s>" escapeSeq'
+              pressDasherKey history escapeSeq'
 
-              -- TODO: Bring this back instead of following
-              -- -- TODO: Simplify after proper logging
-              -- either
-              --   -- (T.printf "Error parsing escape sequence: %s")
-              --   print
-              --   (XDoCom.execute >=> either print print)
-              --   (XDoCom.parse buffer)
-              XDoCom.pressKey $ dasherKeyCodeToXCode finalBuffer
-
-              streamKeysRec
+              streamKeysRec $ escapeSeq' : history
 
           else do
             T.printf "Caching keys: %s\n" key
-            streamWithEscape $ buffer <> key
+            streamWithEscape history $ escapeSeq <> key
