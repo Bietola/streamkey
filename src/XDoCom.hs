@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import Control.Exception hiding (catch)
 import Control.Monad.Catch
 import Control.Foldl as Fold
+import Turtle (s, (%))
 import qualified Turtle as Sh
 
 debugMode = True
@@ -23,7 +24,7 @@ execute (Key key) = let
   lines = Sh.single . flip (Sh.fold @Sh.Shell) Fold.list
   try =
     Right . show <$> lines do
-      Sh.when debugMode $ Sh.echo $ Sh.repr $ "xdotool key " <> key
+      Sh.when debugMode $ Sh.printf ("xdotool key"%s%"\n") key
       let command = "xdotool key " <> key
       Sh.inshell command Sh.empty
   in try `catch`

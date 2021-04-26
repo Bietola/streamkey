@@ -19,9 +19,17 @@ import Data.Text (Text)
 import qualified Data.Text.IO as T
 import qualified Data.Text as T
 import qualified Text.Printf as T
-import qualified Turtle as SH
+import qualified Turtle as Sh
 
 import qualified XDoCom
+
+data DasherContext =
+  DasherContext { history :: [Text]
+                , bsAmount :: [Int] }
+
+defDasherContext =
+  DasherContext { history = []
+                , bsAmount = [] }
 
 -- Get unicode escape code of given Text
 encodeUnicode16 :: Text -> [Text]
@@ -32,6 +40,7 @@ encodeUnicode16 = T.foldl (\s c -> s ++ escapeChar c) []
 -- TODO
 dasherKeyCodeToXCode :: T.Text -> T.Text
 dasherKeyCodeToXCode key
+  | key == "<udo>" = error "Should not be handled by this..."
   | key == "<lt>" = "<"
   | key == "<gt>" = ">"
   | key == "<bs>" = "BackSpace"
@@ -41,17 +50,20 @@ dasherKeyCodeToXCode key
   | otherwise = head $ encodeUnicode16 key
 
 parseDasherKeyEvent :: T.Text -> Maybe T.Text
-parseDasherKeyEvent = listToMaybe . SH.match do
+parseDasherKeyEvent = listToMaybe . Sh.match do
   "Key("
-  key <- SH.selfless $ SH.many SH.dot
+  key <- Sh.selfless $ Sh.many Sh.dot
   ")"
-  return $ SH.fromString key
+  return $ Sh.fromString key
 
 -- TODO: Implement
-isDasherEscapeSeq _ = True
+isDasherEscapeSeq :: Text -> Bool
+isDasherEscapeSeq = not . null . Sh.match do { "<"; Sh.star Sh.anyChar; ">" }
 
-pressDasherKey :: [Text] -> Text -> IO ()
-pressDasherKey history key =
+pressDasherKey :: DasherContext -> Text -> IO DasherContext
+pressDasherKey context key = do
+  T.printf "Pressing key: %s\n" key
+
   -- TODO: Handle error using better version of commented out code below
   -- -- TODO: Simplify after proper logging
   -- -- either
@@ -59,17 +71,49 @@ pressDasherKey history key =
   --   print
   --   (XDoCom.execute >=> either print print)
   --   (XDoCom.parse escapeSeq)
-  void $ if key == "<bs>" && isDasherEscapeSeq (head history)
+  let hist = history context
+      bsAmnt = bsAmount context
+      lastKey = head hist
+
+  if key == "<udo>"
+    -- Handle dasher undo
     then
-      -- TODO: Use `StateT`
-      -- ignoreBackspaces = ???
-      XDoCom.pressKey "BackSpace"
-    else
-      XDoCom.pressKey $ dasherKeyCodeToXCode key
+      if not $ null bsAmnt then do
+        T.printf "Processing abnormal space amount specifier: %s\n" (show bsAmnt)
+
+        if head  bsAmnt <= 0 then do
+          -- Negative amount means don't produce spaces until amount reaches 0
+          let newBSAmnt = if head bsAmnt == 0
+                            then tail bsAmnt
+                            else (head bsAmnt + 1) : tail bsAmnt
+
+          -- NB. Not going back in history
+          return context{ bsAmount = newBSAmnt }
+
+        else
+          -- Positive means repeat this number of spaces and remove amount entry
+          -- TODO: Implement
+          -- NB: Remember to go back in history
+          undefined
+
+      -- Add abnormal backspace amounts for escape codes
+      else if isDasherEscapeSeq lastKey then do
+        -- Only go back once for the whole escape sequence
+        void $ XDoCom.pressKey "BackSpace"
+        return context{ history = tail hist -- Going back remove hole escape seq
+                      , bsAmount = -(T.length lastKey) + 2 : bsAmount context }
+      else do
+        void $ XDoCom.pressKey "BackSpace"
+        return context{ history = tail hist }
+
+    -- press  key normally
+    else do
+      void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
+      return context{ history = key : hist }
 
 streamKeys :: IO ()
 streamKeys =
-  streamKeysRec []
+  streamKeysRec defDasherContext
   where
     -- TODO: Remove the need for this with logging?
     maybeParseKeyEvent :: Text -> IO () -> (Text -> IO ()) -> IO ()
@@ -81,13 +125,13 @@ streamKeys =
 
         Just key -> onOk key
 
-    streamKeysRec :: [Text] -> IO ()
-    streamKeysRec history = do
+    streamKeysRec :: DasherContext -> IO ()
+    streamKeysRec context = do
       line <- T.pack <$> getLine
 
       maybeParseKeyEvent line
         -- on parse fail
-        (streamKeysRec history) 
+        (streamKeysRec context) 
         -- on parse ok
         \key -> do
           T.printf "Processing text from dasher: %s\n" key
@@ -95,20 +139,18 @@ streamKeys =
           if key == "<"
             then do
               print "Initiating escape"
-              streamWithEscape history T.empty
+              streamWithEscape context T.empty
 
           else do
-            T.printf "Pressing key: %s\n" key
-            pressDasherKey history key
-            streamKeysRec $ key : history
+            pressDasherKey context key >>= streamKeysRec
 
-    streamWithEscape :: [Text] -> Text -> IO ()
-    streamWithEscape history escapeSeq = do
+    streamWithEscape :: DasherContext -> Text -> IO ()
+    streamWithEscape context escapeSeq = do
       line <- T.pack <$> getLine
 
       maybeParseKeyEvent line
         -- on parse fail
-        (streamWithEscape history escapeSeq)
+        (streamWithEscape context escapeSeq)
         -- on parse ok
         \key -> do
           T.printf "Processing text from dasher: %s\n" key
@@ -117,11 +159,9 @@ streamKeys =
             then do
               let escapeSeq' = T.concat ["<", escapeSeq, ">"]
 
-              T.printf "Finalizing escape: <%s>" escapeSeq'
-              pressDasherKey history escapeSeq'
-
-              streamKeysRec $ escapeSeq' : history
+              T.printf "Finalizing escape: %s" escapeSeq'
+              pressDasherKey context escapeSeq' >>= streamKeysRec
 
           else do
             T.printf "Caching keys: %s\n" key
-            streamWithEscape history $ escapeSeq <> key
+            streamWithEscape context $ escapeSeq <> key
