@@ -75,7 +75,11 @@ pressDasherKey context key = do
       bsAmnt = bsAmount context
       lastKey = head hist
 
-  if key == "<udo>"
+  if key == "<bs>" then do
+    T.printf "Backspace not supported yet!\n"
+    return context
+
+  else if key == "<udo>"
     -- Handle dasher undo
     then
       if not $ null bsAmnt then do
@@ -120,7 +124,7 @@ streamKeys =
     maybeParseKeyEvent rawLine onFail onOk = 
       case parseDasherKeyEvent rawLine of
         Nothing -> do
-          T.printf "Ignoring invalid key event: %s\n" rawLine
+          T.printf "Ignoring invalid key event: %s (U%s)\n" rawLine (show $ encodeUnicode16 rawLine)
           onFail
 
         Just key -> onOk key
@@ -134,7 +138,7 @@ streamKeys =
         (streamKeysRec context) 
         -- on parse ok
         \key -> do
-          T.printf "Processing text from dasher: %s\n" key
+          T.printf "[MainMode] Processing text from dasher: %s\n" key
 
           if key == "<"
             then do
@@ -153,14 +157,24 @@ streamKeys =
         (streamWithEscape context escapeSeq)
         -- on parse ok
         \key -> do
-          T.printf "Processing text from dasher: %s\n" key
+          T.printf "[EscapeMode] Processing text from dasher: %s\n" key
 
-          if key == ">"
-            then do
-              let escapeSeq' = T.concat ["<", escapeSeq, ">"]
+          if key == "<udo>" then
+            if T.null escapeSeq then do
+              -- exit escape mode
+              T.printf "Aborting escape because of user undo!\n"
+              streamKeysRec context
+            else do
+              -- Remove last character of escape seq
+              let newEscSeq = T.take (T.length escapeSeq - 1) escapeSeq
+              T.printf "[EscapeMode] Undoing (%s)\n" newEscSeq
+              streamWithEscape context newEscSeq
 
-              T.printf "Finalizing escape: %s" escapeSeq'
-              pressDasherKey context escapeSeq' >>= streamKeysRec
+          else if key == ">" then do
+            let escapeSeq' = T.concat ["<", escapeSeq, ">"]
+
+            T.printf "Finalizing escape: %s\n" escapeSeq'
+            pressDasherKey context escapeSeq' >>= streamKeysRec
 
           else do
             T.printf "Caching keys: %s\n" key
