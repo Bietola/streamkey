@@ -8,6 +8,7 @@ import Prelude hiding (log, break)
 import Control.Applicative as A
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Identity
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State.Strict
 import Data.Either
@@ -55,6 +56,7 @@ dasherKeyCodeToXCode key
   | key == "<bs>" = "BackSpace"
   | key == "<cr>" = "Return"
   | key == "<tab>" = "Tab"
+  | key == "<esc>" = "Escape"
   | key == " " = "KP_Space"
   | otherwise = head $ encodeUnicode16 key
 
@@ -122,7 +124,13 @@ pressDasherKey context key = do
     -- press  key normally
     else do
       void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
-      return context{ history = key : hist }
+      let context' = context{ history = key : hist }
+      
+      -- TODO: Handle other keys
+      if key == "<esc>" then
+        return context'{ bufferMode = FillBuffer }
+      else
+        return context'
 
 streamKeys :: IO ()
 streamKeys =
@@ -157,18 +165,21 @@ streamKeys =
 
     streamKeysRec :: DasherContext -> IO ()
     streamKeysRec context = do
-      (rawEvent, context) <- nextEvent context
+      (rawEvent, context') <- nextEvent context
 
       let buf = buffer context
-          bufMode = bufferMode context
+          bufMode = bufferMode context'
 
-      if bufMode == FillBuffer then
-        streamKeysRec context{ buffer = V.snoc buf rawEvent }
+      if bufMode == FillBuffer then do
+        -- check for special buffer manipulation commands
+        let newBuf = V.snoc buf rawEvent
+
+        streamKeysRec context'{ buffer = newBuf }
 
       else
         maybeParseKeyEvent rawEvent
           -- on parse fail
-          (streamKeysRec context) 
+          (streamKeysRec context') 
           -- on parse ok
           \key -> do
             T.printf "[MainMode] Processing text from dasher: %s\n" key
@@ -176,18 +187,18 @@ streamKeys =
             if key == "<"
               then do
                 print "Initiating escape"
-                streamWithEscape context T.empty
+                streamWithEscape context' T.empty
 
             else do
-              pressDasherKey context key >>= streamKeysRec
+              pressDasherKey context' key >>= streamKeysRec
 
     streamWithEscape :: DasherContext -> Text -> IO ()
     streamWithEscape context escapeSeq = do
-      (rawEvent, context) <- nextEvent context
+      (rawEvent, context') <- nextEvent context
 
       maybeParseKeyEvent rawEvent
         -- on parse fail
-        (streamWithEscape context escapeSeq)
+        (streamWithEscape context' escapeSeq)
         -- on parse ok
         \key -> do
           T.printf "[EscapeMode] Processing text from dasher: %s\n" key
@@ -196,19 +207,19 @@ streamKeys =
             if T.null escapeSeq then do
               -- exit escape mode
               T.printf "Aborting escape because of user undo!\n"
-              streamKeysRec context
+              streamKeysRec context'
             else do
               -- Remove last character of escape seq
               let newEscSeq = T.take (T.length escapeSeq - 1) escapeSeq
               T.printf "[EscapeMode] Undoing (%s)\n" newEscSeq
-              streamWithEscape context newEscSeq
+              streamWithEscape context' newEscSeq
 
           else if key == ">" then do
             let escapeSeq' = T.concat ["<", escapeSeq, ">"]
 
             T.printf "Finalizing escape: %s\n" escapeSeq'
-            pressDasherKey context escapeSeq' >>= streamKeysRec
+            pressDasherKey context' escapeSeq' >>= streamKeysRec
 
           else do
             T.printf "Caching keys: %s\n" key
-            streamWithEscape context $ escapeSeq <> key
+            streamWithEscape context' $ escapeSeq <> key
