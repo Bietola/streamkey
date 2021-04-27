@@ -19,17 +19,26 @@ import Data.Text (Text)
 import qualified Data.Text.IO as T
 import qualified Data.Text as T
 import qualified Text.Printf as T
+import qualified Data.Vector as V
+
 import qualified Turtle as Sh
 
 import qualified XDoCom
 
+data BufferMode = FillBuffer | UseBuffer | IgnoreBuffer
+  deriving Eq
+
 data DasherContext =
   DasherContext { history :: [Text]
-                , bsAmount :: [Int] }
+                , bsAmount :: [Int]
+                , bufferMode :: BufferMode
+                , buffer :: V.Vector Text }
 
 defDasherContext =
   DasherContext { history = []
-                , bsAmount = [] }
+                , bsAmount = []
+                , bufferMode = IgnoreBuffer
+                , buffer = V.empty}
 
 -- Get unicode escape code of given Text
 encodeUnicode16 :: Text -> [Text]
@@ -118,6 +127,7 @@ pressDasherKey context key = do
 streamKeys :: IO ()
 streamKeys =
   streamKeysRec defDasherContext
+
   where
     -- TODO: Remove the need for this with logging?
     maybeParseKeyEvent :: Text -> IO () -> (Text -> IO ()) -> IO ()
@@ -129,30 +139,53 @@ streamKeys =
 
         Just key -> onOk key
 
+    nextEvent :: DasherContext -> IO (Text, DasherContext)
+    nextEvent context = do
+      let buf = buffer context
+          bufMode = bufferMode context
+      
+      if bufMode == UseBuffer then do
+        if V.null buf then do
+          T.printf "Buffer empty, accepting new events from stdin\n"
+          nextEvent context{ bufferMode = IgnoreBuffer }
+        else
+          return (V.head buf, context{ buffer = V.tail buf })
+          
+      else do
+        rawEvent <- T.pack <$> getLine
+        return (rawEvent, context)
+
     streamKeysRec :: DasherContext -> IO ()
     streamKeysRec context = do
-      line <- T.pack <$> getLine
+      (rawEvent, context) <- nextEvent context
 
-      maybeParseKeyEvent line
-        -- on parse fail
-        (streamKeysRec context) 
-        -- on parse ok
-        \key -> do
-          T.printf "[MainMode] Processing text from dasher: %s\n" key
+      let buf = buffer context
+          bufMode = bufferMode context
 
-          if key == "<"
-            then do
-              print "Initiating escape"
-              streamWithEscape context T.empty
+      if bufMode == FillBuffer then
+        streamKeysRec context{ buffer = V.snoc buf rawEvent }
 
-          else do
-            pressDasherKey context key >>= streamKeysRec
+      else
+        maybeParseKeyEvent rawEvent
+          -- on parse fail
+          (streamKeysRec context) 
+          -- on parse ok
+          \key -> do
+            T.printf "[MainMode] Processing text from dasher: %s\n" key
+
+            if key == "<"
+              then do
+                print "Initiating escape"
+                streamWithEscape context T.empty
+
+            else do
+              pressDasherKey context key >>= streamKeysRec
 
     streamWithEscape :: DasherContext -> Text -> IO ()
     streamWithEscape context escapeSeq = do
-      line <- T.pack <$> getLine
+      (rawEvent, context) <- nextEvent context
 
-      maybeParseKeyEvent line
+      maybeParseKeyEvent rawEvent
         -- on parse fail
         (streamWithEscape context escapeSeq)
         -- on parse ok
