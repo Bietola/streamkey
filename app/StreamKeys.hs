@@ -11,6 +11,7 @@ import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State.Strict
+import Data.Functor ((<&>))
 import Data.Either
 import Control.Break
 import GHC.Exts
@@ -26,8 +27,8 @@ import qualified Turtle as Sh
 
 import qualified XDoCom
 
-data BufferMode = FillBuffer | UseBuffer | IgnoreBuffer
-  deriving Eq
+data BufferMode = FillBuffer | ConsumeBuffer | IgnoreBuffer
+  deriving (Eq, Show)
 
 data DasherContext =
   DasherContext { history :: [Text]
@@ -67,27 +68,89 @@ parseDasherKeyEvent = listToMaybe . Sh.match do
   ")"
   return $ Sh.fromString key
 
--- TODO: Implement
 isDasherEscapeSeq :: Text -> Bool
-isDasherEscapeSeq = not . null . Sh.match do { "<"; Sh.star Sh.anyChar; ">" }
+isDasherEscapeSeq =
+  not . null . Sh.match do { "<"; Sh.selfless $ Sh.star Sh.anyChar; ">" }
 
-pressDasherKey :: DasherContext -> Text -> IO DasherContext
-pressDasherKey context key = do
-  T.printf "Pressing key: %s\n" key
+handleDasherKeypress :: DasherContext -> Text -> IO DasherContext
+handleDasherKeypress context key =
+  let
 
-  -- TODO: Handle error using better version of commented out code below
-  -- -- TODO: Simplify after proper logging
-  -- -- either
-  --   -- (T.printf "Error parsing escape sequence: %s")
-  --   print
-  --   (XDoCom.execute >=> either print print)
-  --   (XDoCom.parse escapeSeq)
+    pressDasherKey :: DasherContext -> Text -> IO DasherContext
+    pressDasherKey context key = do
+      case bufferMode context of
+        m | m `elem` [IgnoreBuffer, ConsumeBuffer] -> do
+          -- TODO: Handle error using better version of commented out code below
+          -- -- TODO: Simplify after proper logging
+          -- -- either
+          --   -- (T.printf "Error parsing escape sequence: %s")
+          --   print
+          --   (XDoCom.execute >=> either print print)
+          --   (XDoCom.parse escapeSeq)
+          XDoCom.pressKey key
+          return context
+        FillBuffer ->
+          return context
+
+    undoHistory :: DasherContext -> DasherContext
+    undoHistory context =
+      case bufferMode context of
+        IgnoreBuffer -> context { history = tail $ history context }
+        FillBuffer -> 
+          if V.null $ buffer context
+            then
+              -- TODO: Consider this instead?: context { bufferMode = IgnoreBuffer }
+              error "Buffer should not be empty here!"
+            else
+              context { buffer = V.tail $ buffer context }
+        ConsumeBuffer -> 
+          error "History should not be undone while consuming buffer!"
+
+    addToHistory :: DasherContext -> Text -> DasherContext
+    addToHistory context key =
+      case bufferMode context of
+        m | m `elem` [IgnoreBuffer,  ConsumeBuffer] ->
+          context { history = key : history context }
+        FillBuffer ->
+          context { buffer = V.snoc (buffer context) key }
+
+    changeBufferMode :: DasherContext -> Text -> DasherContext
+    changeBufferMode context key = context { bufferMode = newMode }
+      where
+        oldMode = bufferMode context
+        newMode = case oldMode of
+
+          IgnoreBuffer ->
+              -- TODO: Handle other bufferMode changing keys
+              if key `elem` ["<esc>", "TODO_FILLME"] then
+                FillBuffer
+              else
+                oldMode
+
+          FillBuffer ->
+            -- TODO: Handle abort and quit
+            if key `elem` ["<wbf>", "TODO_FILLME"] then
+              ConsumeBuffer
+            else
+              oldMode
+
+          ConsumeBuffer ->
+            if V.null $ buffer context
+              then
+                IgnoreBuffer
+              else
+                oldMode
+
+  in do
+
+  T.printf "[%s] Pressing key: %s\n" (show $ bufferMode context) key
+
   let hist = history context
       bsAmnt = bsAmount context
       lastKey = head hist
 
   if key == "<bs>" then do
-    T.printf "Backspace not supported yet!\n"
+    T.printf "[WARNING] Backspace not supported yet!\n"
     return context
 
   else if key == "<udo>"
@@ -114,23 +177,19 @@ pressDasherKey context key = do
       -- Add abnormal backspace amounts for escape codes
       else if isDasherEscapeSeq lastKey then do
         -- Only go back once for the whole escape sequence
-        void $ XDoCom.pressKey "BackSpace"
-        return context{ history = tail hist -- Going back remove hole escape seq
-                      , bsAmount = -(T.length lastKey) + 2 : bsAmount context }
+        context' <- pressDasherKey context "BackSpace"
+        -- NB. `removeLast` for going back removing whole escape seq
+        return $ undoHistory context'{ bsAmount = -(T.length lastKey) + 2 : bsAmnt }
       else do
-        void $ XDoCom.pressKey "BackSpace"
-        return context{ history = tail hist }
+        pressDasherKey context "BackSpace" <&> undoHistory
 
     -- press  key normally
     else do
-      void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
-      let context' = context{ history = key : hist }
-      
-      -- TODO: Handle other keys
-      if key == "<esc>" then
-        return context'{ bufferMode = FillBuffer }
-      else
-        return context'
+      context' <- pressDasherKey context $ dasherKeyCodeToXCode key
+      let context'' = addToHistory context' key
+      let context''' = changeBufferMode context'' key
+
+      return context'''
 
 streamKeys :: IO ()
 streamKeys =
@@ -152,7 +211,7 @@ streamKeys =
       let buf = buffer context
           bufMode = bufferMode context
       
-      if bufMode == UseBuffer then do
+      if bufMode == ConsumeBuffer then do
         if V.null buf then do
           T.printf "Buffer empty, accepting new events from stdin\n"
           nextEvent context{ bufferMode = IgnoreBuffer }
@@ -167,30 +226,20 @@ streamKeys =
     streamKeysRec context = do
       (rawEvent, context') <- nextEvent context
 
-      let buf = buffer context
-          bufMode = bufferMode context'
+      maybeParseKeyEvent rawEvent
+        -- on parse fail
+        (streamKeysRec context') 
+        -- on parse ok
+        \key -> do
+          T.printf "[MainMode] Processing text from dasher: %s\n" key
 
-      if bufMode == FillBuffer then do
-        -- check for special buffer manipulation commands
-        let newBuf = V.snoc buf rawEvent
+          if key == "<"
+            then do
+              print "Initiating escape"
+              streamWithEscape context' T.empty
 
-        streamKeysRec context'{ buffer = newBuf }
-
-      else
-        maybeParseKeyEvent rawEvent
-          -- on parse fail
-          (streamKeysRec context') 
-          -- on parse ok
-          \key -> do
-            T.printf "[MainMode] Processing text from dasher: %s\n" key
-
-            if key == "<"
-              then do
-                print "Initiating escape"
-                streamWithEscape context' T.empty
-
-            else do
-              pressDasherKey context' key >>= streamKeysRec
+          else do
+            handleDasherKeypress context' key >>= streamKeysRec
 
     streamWithEscape :: DasherContext -> Text -> IO ()
     streamWithEscape context escapeSeq = do
@@ -218,7 +267,7 @@ streamKeys =
             let escapeSeq' = T.concat ["<", escapeSeq, ">"]
 
             T.printf "Finalizing escape: %s\n" escapeSeq'
-            pressDasherKey context' escapeSeq' >>= streamKeysRec
+            handleDasherKeypress context' escapeSeq' >>= streamKeysRec
 
           else do
             T.printf "Caching keys: %s\n" key
