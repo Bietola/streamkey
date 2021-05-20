@@ -11,9 +11,11 @@ import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State.Strict
+import Control.Exception
 import Data.Functor ((<&>))
 import Data.Either
 import Control.Break
+import System.IO hiding (BufferMode, Buffer)
 import GHC.Exts
 
 import Data.Maybe
@@ -80,15 +82,24 @@ handleDasherKeypress context key =
     pressDasherKey context key = do
       case bufferMode context of
         m | m `elem` [IgnoreBuffer, ConsumeBuffer] -> do
-          -- TODO: Handle error using better version of commented out code below
-          -- -- TODO: Simplify after proper logging
-          -- -- either
-          --   -- (T.printf "Error parsing escape sequence: %s")
-          --   print
-          --   (XDoCom.execute >=> either print print)
-          --   (XDoCom.parse escapeSeq)
-          XDoCom.pressKey key
+          -- Ignore buffer control sequences when consuming the buffer
+          -- TODO: Add other sequences
+          if bufferMode context == ConsumeBuffer && key `elem` ["<wbf>", "TODO_FILLME"]
+            then
+              T.printf "[ConsumeBuffer] Ignoring buffer control seq: %s\n" key
+            else do
+              -- TODO: Handle error using better version of commented out code below
+              -- -- TODO: Simplify after proper logging
+              -- -- either
+              --   -- (T.printf "Error parsing escape sequence: %s")
+              --   print
+              --   (XDoCom.execute >=> either print print)
+              --   (XDoCom.parse escapeSeq)
+              T.printf "Pressing key: %s\n" key
+              void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
+
           return context
+
         FillBuffer ->
           return context
 
@@ -102,17 +113,25 @@ handleDasherKeypress context key =
               -- TODO: Consider this instead?: context { bufferMode = IgnoreBuffer }
               error "Buffer should not be empty here!"
             else
-              context { buffer = V.tail $ buffer context }
+              context { buffer = V.init $ buffer context }
         ConsumeBuffer -> 
           error "History should not be undone while consuming buffer!"
 
-    addToHistory :: DasherContext -> Text -> DasherContext
+    addToHistory :: DasherContext -> Text -> IO DasherContext
     addToHistory context key =
       case bufferMode context of
-        m | m `elem` [IgnoreBuffer,  ConsumeBuffer] ->
-          context { history = key : history context }
-        FillBuffer ->
-          context { buffer = V.snoc (buffer context) key }
+        IgnoreBuffer ->
+          -- Extend history
+          return $ context { history = key : history context }
+        FillBuffer -> do
+          -- Extend history *and* buffer
+          let newBuffer = V.snoc (buffer context) key
+          T.printf "[FillBuffer] Buffer: %s\n" (show newBuffer)
+          return $ context { history = key : history context
+                           , buffer = newBuffer }
+        -- NB. `ConsumeBuffer` does not fill history because `FillBuffer already does`
+        -- WARNING: This only works if no undo functionality is implemented in `ConsumeBuffer` mode!
+        ConsumeBuffer -> return context
 
     changeBufferMode :: DasherContext -> Text -> DasherContext
     changeBufferMode context key = context { bufferMode = newMode }
@@ -143,20 +162,21 @@ handleDasherKeypress context key =
 
   in do
 
-  T.printf "[%s] Pressing key: %s\n" (show $ bufferMode context) key
+  T.printf "[%s] Handling key: %s\n" (show $ bufferMode context) key
 
   let hist = history context
       bsAmnt = bsAmount context
       lastKey = head hist
 
-  if key == "<bs>" then do
-    T.printf "[WARNING] Backspace not supported yet!\n"
-    return context
-
-  else if key == "<udo>"
+  if key == "<udo>"
     -- Handle dasher undo
     then
-      if not $ null bsAmnt then do
+      if lastKey == "<bs>"
+         then do
+           T.printf "[ERROR] CAN'T UNDO BACKSPACE! ALL UNDOS IGNORED UNTIL NON-BS KEY IS PRESSED!\n"
+           return context
+      
+      else if not $ null bsAmnt then do
         T.printf "Processing abnormal space amount specifier: %s\n" (show bsAmnt)
 
         if head  bsAmnt <= 0 then do
@@ -177,16 +197,16 @@ handleDasherKeypress context key =
       -- Add abnormal backspace amounts for escape codes
       else if isDasherEscapeSeq lastKey then do
         -- Only go back once for the whole escape sequence
-        context' <- pressDasherKey context "BackSpace"
+        context' <- pressDasherKey context "<bs>"
         -- NB. `removeLast` for going back removing whole escape seq
         return $ undoHistory context'{ bsAmount = -(T.length lastKey) + 2 : bsAmnt }
       else do
-        pressDasherKey context "BackSpace" <&> undoHistory
+        pressDasherKey context "<bs>" <&> undoHistory
 
     -- press  key normally
     else do
-      context' <- pressDasherKey context $ dasherKeyCodeToXCode key
-      let context'' = addToHistory context' key
+      context' <- pressDasherKey context key
+      context'' <- addToHistory context' key
       let context''' = changeBufferMode context'' key
 
       return context'''
@@ -206,31 +226,53 @@ streamKeys =
 
         Just key -> onOk key
 
-    nextEvent :: DasherContext -> IO (Text, DasherContext)
-    nextEvent context = do
+    -- (mkey, context) <- runStateT nextEvent context
+    maybeNextEvent :: StateT DasherContext IO (Maybe Text)
+    maybeNextEvent = do
+      context <- get
+
       let buf = buffer context
           bufMode = bufferMode context
-      
+
       if bufMode == ConsumeBuffer then do
         if V.null buf then do
-          T.printf "Buffer empty, accepting new events from stdin\n"
-          nextEvent context{ bufferMode = IgnoreBuffer }
-        else
-          return (V.head buf, context{ buffer = V.tail buf })
+          lift $ T.printf "Buffer empty, accepting new events from stdin\n"
+          put $ context { bufferMode = IgnoreBuffer }
+          maybeNextEvent 
+        else do
+          put $ context { buffer = V.tail buf }
+          return $ Just $ V.head buf
           
       else do
-        rawEvent <- T.pack <$> getLine
-        return (rawEvent, context)
+        -- Get raw event from stdin
+        line <- lift $ try @IOError getLine
+        rawEvent <-
+          lift $ case line of
+            Right line -> return $ T.pack line
+            Left e -> do
+              -- Write history to file before exiting
+              outh <- openFile "assets/history" AppendMode
+              T.hPutStrLn outh $ T.concat $ reverse $ history context
+              hClose outh
+              throw e
+
+        -- Parse it (migth fail)
+        case parseDasherKeyEvent rawEvent of
+          Nothing -> do
+            lift $ T.printf "Ignoring invalid key event: %s (U%s)\n" rawEvent (show $ encodeUnicode16 rawEvent)
+            return Nothing
+          Just key -> return $ Just key
 
     streamKeysRec :: DasherContext -> IO ()
     streamKeysRec context = do
-      (rawEvent, context') <- nextEvent context
+      (maybeKey, context') <- runStateT maybeNextEvent context
 
-      maybeParseKeyEvent rawEvent
+      case maybeKey of
         -- on parse fail
-        (streamKeysRec context') 
+        Nothing -> streamKeysRec context' 
+
         -- on parse ok
-        \key -> do
+        Just key -> do
           T.printf "[MainMode] Processing text from dasher: %s\n" key
 
           if key == "<"
@@ -243,13 +285,14 @@ streamKeys =
 
     streamWithEscape :: DasherContext -> Text -> IO ()
     streamWithEscape context escapeSeq = do
-      (rawEvent, context') <- nextEvent context
+      (maybeKey, context') <- runStateT maybeNextEvent context
 
-      maybeParseKeyEvent rawEvent
-        -- on parse fail
-        (streamWithEscape context' escapeSeq)
-        -- on parse ok
-        \key -> do
+      case maybeKey of
+        -- On parse fail
+        Nothing -> streamWithEscape context' escapeSeq
+
+        -- On parse ok
+        Just key ->  do
           T.printf "[EscapeMode] Processing text from dasher: %s\n" key
 
           if key == "<udo>" then

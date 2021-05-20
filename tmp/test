@@ -1,0 +1,1 @@
+iimport fileinput<cr><cr>def main():<cr>fileinput.input()<esc>I<wbf>next(<esc>A<wbf>)<esc>I<wbf>name = <esc>o<wbf><cr>print(f'{name}')<esc>4ko<wbf><esc>:wq<cr><wbf>python main.py<cr>
