@@ -54,8 +54,8 @@ encodeUnicode16 = T.foldl (\s c -> s ++ escapeChar c) []
 dasherKeyCodeToXCode :: T.Text -> T.Text
 dasherKeyCodeToXCode key
   | key == "<udo>" = error "Should not be handled by this..."
-  | key == "<lt>" = "<"
-  | key == "<gt>" = ">"
+  | key == "<lt>" = "less"
+  | key == "<gt>" = "greater"
   | key == "<bs>" = "BackSpace"
   | key == "<cr>" = "Return"
   | key == "<tab>" = "Tab"
@@ -212,7 +212,10 @@ handleDasherKeypress context key =
       return context'''
 
 streamKeys :: IO ()
-streamKeys =
+streamKeys = do
+  -- Intro message
+  putStrLn "WARNING: DO NOT CTRL-C THIS PROGRAM TO CLOSE IT. Terminate it by closing dasher, so that bookkeeping things can be done correctly."
+
   streamKeysRec defDasherContext
 
   where
@@ -252,6 +255,7 @@ streamKeys =
             Left e -> do
               -- Write history to file before exiting
               outh <- openFile "assets/history" AppendMode
+              T.hPutStrLn outh "----"
               T.hPutStrLn outh $ T.concat $ reverse $ history context
               hClose outh
               throw e
