@@ -31,8 +31,9 @@ dependencies:
 - break
 - aeson
 - optparse-applicative
+- lens
+- lens-regex-pcre
 - turtle
-- sdl2
 
 library:
   source-dirs: src

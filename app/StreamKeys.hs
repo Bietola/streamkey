@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module StreamKeys (streamKeys) where
 
@@ -14,6 +16,7 @@ import Control.Monad.Trans.State.Strict
 import Control.Exception
 import Data.Functor ((<&>))
 import Data.Either
+import Data.List
 import Control.Break
 import System.IO hiding (BufferMode, Buffer)
 import GHC.Exts
@@ -24,7 +27,9 @@ import qualified Data.Text.IO as T
 import qualified Data.Text as T
 import qualified Text.Printf as T
 import qualified Data.Vector as V
-
+import Control.Lens
+import qualified Control.Lens.Regex.Text as Re
+import Control.Lens.Regex.Text (regex)
 import qualified Turtle as Sh
 
 import qualified XDoCom
@@ -52,16 +57,39 @@ encodeUnicode16 = T.foldl (\s c -> s ++ escapeChar c) []
 
 -- TODO
 dasherKeyCodeToXCode :: T.Text -> T.Text
-dasherKeyCodeToXCode key
-  | key == "<udo>" = error "Should not be handled by this..."
-  | key == "<lt>" = "less"
-  | key == "<gt>" = "greater"
-  | key == "<bs>" = "BackSpace"
-  | key == "<cr>" = "Return"
-  | key == "<tab>" = "Tab"
-  | key == "<esc>" = "Escape"
-  | key == " " = "KP_Space"
-  | otherwise = head $ encodeUnicode16 key
+dasherKeyCodeToXCode keycode =
+  -- let (mods, sepNKey) = T.break ((||) <$> (=='+') <*> (=='-')) keycode -- TODO: Try alternative
+  case keycode ^? [regex|<(?:([scam]+)([-+]))?(.+)>|] . index 0 . Re.groups of
+    Just ["", "", key] -> specialKey2x key
+    Just [mods, sep, key] ->
+      T.intercalate "+" $ map modAbbr2x (T.unpack mods) ++ [key2x key]
+        where key2x = case sep of
+                        "+" -> specialKey2x
+                        "-" -> normalKey2x
+    Nothing -> normalKey2x keycode
+
+  where
+    -- Special keys are things like `cr`, `bs`, etc...
+    specialKey2x :: T.Text -> T.Text
+    specialKey2x key
+      | key == "udo" = error "Should not be handled by this..."
+      | key == "lt" = "less"
+      | key == "gt" = "greater"
+      | key == "bs" = "BackSpace"
+      | key == "cr" = "Return"
+      | key == "tab" = "Tab"
+      | key == "esc" = "Escape"
+      | otherwise = error $ "Unexistent special dasher key: " ++ T.unpack key
+      
+    normalKey2x key
+      | key == " " = "KP_Space"
+      | otherwise = head $ encodeUnicode16 key
+
+    modAbbr2x abbr
+      | abbr == 's' = "shift"
+      | abbr == 'c' = "ctrl"
+      | abbr == 'a' = "alt"
+      | abbr == 'm' = "super"
 
 parseDasherKeyEvent :: T.Text -> Maybe T.Text
 parseDasherKeyEvent = listToMaybe . Sh.match do

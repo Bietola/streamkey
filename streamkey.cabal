@@ -36,9 +36,10 @@ library
     , break
     , exceptions
     , foldl
+    , lens
+    , lens-regex-pcre
     , mtl
     , optparse-applicative
-    , sdl2
     , text
     , transformers
     , transformers-either
@@ -61,9 +62,10 @@ executable streamk
     , break
     , exceptions
     , foldl
+    , lens
+    , lens-regex-pcre
     , mtl
     , optparse-applicative
-    , sdl2
     , streamkey
     , text
     , transformers
@@ -86,9 +88,10 @@ test-suite streamkey-test
     , break
     , exceptions
     , foldl
+    , lens
+    , lens-regex-pcre
     , mtl
     , optparse-applicative
-    , sdl2
     , streamkey
     , text
     , transformers
