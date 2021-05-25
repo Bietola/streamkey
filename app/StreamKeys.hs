@@ -34,7 +34,7 @@ import qualified Turtle as Sh
 
 import qualified XDoCom
 
-data BufferMode = FillBuffer | ConsumeBuffer | IgnoreBuffer
+data BufferMode = FillBuffer | ConsumeBuffer BufferMode | IgnoreBuffer
   deriving (Eq, Show)
 
 data DasherContext =
@@ -109,27 +109,46 @@ handleDasherKeypress context key =
     pressDasherKey :: DasherContext -> Text -> IO DasherContext
     pressDasherKey context key = do
       case bufferMode context of
-        m | m `elem` [IgnoreBuffer, ConsumeBuffer] -> do
-          -- Ignore buffer control sequences when consuming the buffer
-          -- TODO: Add other sequences
-          if bufferMode context == ConsumeBuffer && key `elem` ["<wbf>", "TODO_FILLME"]
-            then
-              T.printf "[ConsumeBuffer] Ignoring buffer control seq: %s\n" key
-            else do
-              -- TODO: Handle error using better version of commented out code below
-              -- -- TODO: Simplify after proper logging
-              -- -- either
-              --   -- (T.printf "Error parsing escape sequence: %s")
-              --   print
-              --   (XDoCom.execute >=> either print print)
-              --   (XDoCom.parse escapeSeq)
-              T.printf "Pressing key: %s\n" key
-              void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
 
+        -- m | m `elem` [IgnoreBuffer, ConsumeBuffer] -> do
+        --   -- Ignore buffer control sequences when consuming the buffer
+        --   -- TODO: Add other sequences
+        --   if bufferMode context == ConsumeBuffer && key `elem` ["<bfi>", "<bfw>", "<bfq>"]
+        --     then
+        --       T.printf "[ConsumeBuffer] Ignoring buffer control seq: %s\n" key
+        --     else do
+        --       -- TODO: Handle error using better version of commented out code below
+        --       -- -- TODO: Simplify after proper logging
+        --       -- -- either
+        --       --   -- (T.printf "Error parsing escape sequence: %s")
+        --       --   print
+        --       --   (XDoCom.execute >=> either print print)
+        --       --   (XDoCom.parse escapeSeq)
+        --       T.printf "Pressing key: %s\n" key
+        --       void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
+
+        (ConsumeBuffer _) | key `elem` ["<bfi>", "<bfw>", "<bfq>"] -> do
+          T.printf "[ConsumeBuffer] Ignoring buffer control seq: %s\n" key
           return context
 
         FillBuffer ->
           return context
+
+        -- TODO: Use https://wiki.haskell.org/MultiCase when available
+        (ConsumeBuffer _) -> doPress
+        IgnoreBuffer      -> doPress
+        where 
+          doPress = do
+            -- TODO: Handle error using better version of commented out code below
+            -- -- TODO: Simplify after proper logging
+            -- -- either
+            --   -- (T.printf "Error parsing escape sequence: %s")
+            --   print
+            --   (XDoCom.execute >=> either print print)
+            --   (XDoCom.parse escapeSeq)
+            T.printf "Pressing key: %s\n" key
+            void $ XDoCom.pressKey $ dasherKeyCodeToXCode key
+            return context
 
     undoHistory :: DasherContext -> DasherContext
     undoHistory context =
@@ -142,7 +161,7 @@ handleDasherKeypress context key =
               error "Buffer should not be empty here!"
             else
               context { buffer = V.init $ buffer context }
-        ConsumeBuffer -> 
+        (ConsumeBuffer _) -> 
           error "History should not be undone while consuming buffer!"
 
     addToHistory :: DasherContext -> Text -> IO DasherContext
@@ -159,7 +178,7 @@ handleDasherKeypress context key =
                            , buffer = newBuffer }
         -- NB. `ConsumeBuffer` does not fill history because `FillBuffer already does`
         -- WARNING: This only works if no undo functionality is implemented in `ConsumeBuffer` mode!
-        ConsumeBuffer -> return context
+        (ConsumeBuffer _) -> return context
 
     changeBufferMode :: DasherContext -> Text -> DasherContext
     changeBufferMode context key = context { bufferMode = newMode }
@@ -169,22 +188,23 @@ handleDasherKeypress context key =
 
           IgnoreBuffer ->
               -- TODO: Handle other bufferMode changing keys
-              if key `elem` ["<esc>", "TODO_FILLME"] then
+              if key `elem` ["<bfi>", "TODO_FILLME"] then
                 FillBuffer
               else
                 oldMode
 
-          FillBuffer ->
+          FillBuffer | key == "<bfq>" ->
             -- TODO: Handle abort and quit
-            if key `elem` ["<wbf>", "TODO_FILLME"] then
-              ConsumeBuffer
-            else
+            ConsumeBuffer IgnoreBuffer
+          FillBuffer | key == "<bfw>" ->
+            ConsumeBuffer FillBuffer
+          FillBuffer ->
               oldMode
 
-          ConsumeBuffer ->
+          (ConsumeBuffer nextMode) ->
             if V.null $ buffer context
               then
-                IgnoreBuffer
+                nextMode
               else
                 oldMode
 
@@ -265,35 +285,38 @@ streamKeys = do
       let buf = buffer context
           bufMode = bufferMode context
 
-      if bufMode == ConsumeBuffer then do
-        if V.null buf then do
+      case bufMode of
+
+        (ConsumeBuffer nextMode) | V.null buf -> do
           lift $ T.printf "Buffer empty, accepting new events from stdin\n"
-          put $ context { bufferMode = IgnoreBuffer }
+          put $ context { bufferMode = nextMode }
           maybeNextEvent 
-        else do
+
+        (ConsumeBuffer _) -> do
           put $ context { buffer = V.tail buf }
           return $ Just $ V.head buf
-          
-      else do
-        -- Get raw event from stdin
-        line <- lift $ try @IOError getLine
-        rawEvent <-
-          lift $ case line of
-            Right line -> return $ T.pack line
-            Left e -> do
-              -- Write history to file before exiting
-              outh <- openFile "assets/history" AppendMode
-              T.hPutStrLn outh "----"
-              T.hPutStrLn outh $ T.concat $ reverse $ history context
-              hClose outh
-              throw e
 
-        -- Parse it (migth fail)
-        case parseDasherKeyEvent rawEvent of
-          Nothing -> do
-            lift $ T.printf "Ignoring invalid key event: %s (U%s)\n" rawEvent (show $ encodeUnicode16 rawEvent)
-            return Nothing
-          Just key -> return $ Just key
+        _ -> do
+
+          -- Get raw event from stdin
+          line <- lift $ try @IOError getLine
+          rawEvent <-
+            lift $ case line of
+              Right line -> return $ T.pack line
+              Left e -> do
+                -- Write history to file before exiting
+                outh <- openFile "assets/history" AppendMode
+                T.hPutStrLn outh "----"
+                T.hPutStrLn outh $ T.concat $ reverse $ history context
+                hClose outh
+                throw e
+
+          -- Parse it (migth fail)
+          case parseDasherKeyEvent rawEvent of
+            Nothing -> do
+              lift $ T.printf "Ignoring invalid key event: %s (U%s)\n" rawEvent (show $ encodeUnicode16 rawEvent)
+              return Nothing
+            Just key -> return $ Just key
 
     streamKeysRec :: DasherContext -> IO ()
     streamKeysRec context = do
