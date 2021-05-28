@@ -37,20 +37,27 @@ import qualified Turtle as Sh
 
 import qualified XDoCom
 
-data BufferMode = FillBuffer | ConsumeBuffer BufferMode | IgnoreBuffer
+data BufferMode = 
+  FillBuffer |
+  UseEscapeBuffer BufferMode |
+  ConsumeBuffer BufferMode |
+  IgnoreBuffer
+
   deriving (Eq, Show)
 
 data DasherContext =
   DasherContext { history :: [Text]
                 , bsAmount :: [Int]
                 , bufferMode :: BufferMode
-                , buffer :: V.Vector Text }
+                , buffer :: V.Vector Text
+                , escapeBuffer :: Text }
 
 defDasherContext =
   DasherContext { history = []
                 , bsAmount = []
                 , bufferMode = IgnoreBuffer
-                , buffer = V.empty}
+                , buffer = V.empty
+                , escapeBuffer = T.empty }
 
 -- Get unicode escape code of given Text
 encodeUnicode16 :: Text -> [Text]
@@ -351,45 +358,40 @@ streamKeys = do
 
         -- on parse ok
         Just key -> do
-          T.printf "[MainMode] Processing text from dasher: %s\n" key
+          let bufMode = bufferMode   context'
+              escBuf  = escapeBuffer context'
 
-          if key == "<"
-            then do
-              print "Initiating escape"
-              streamWithEscape context' T.empty
+          T.printf "[%s] Processing text from dasher: %s\n"(show bufMode) key
 
-          else do
-            handleDasherKeypress context' key >>= streamKeysRec
+          case bufferMode context' of
 
-    streamWithEscape :: DasherContext -> Text -> IO ()
-    streamWithEscape context escapeSeq = do
-      (maybeKey, context') <- runStateT maybeNextEvent context
+            -- Escape Mode
+            (UseEscapeBuffer nextBufMode) ->
+              if key == "<udo>" then
+                if T.null escBuf then do
+                  -- exit escape mode
+                  T.printf "Aborting escape because of user undo!\n"
+                  streamKeysRec context' { bufferMode = nextBufMode }
+                else do
+                  -- Remove last character of escape seq
+                  let newEscSeq = T.take (T.length escBuf - 1) escBuf
+                  T.printf "[EscapeMode] Undoing (%s)\n" newEscSeq
+                  streamKeysRec $ context' { escapeBuffer = newEscSeq }
 
-      case maybeKey of
-        -- On parse fail
-        Nothing -> streamWithEscape context' escapeSeq
+              else if key == ">" then do
+                let escSeq = T.concat ["<", escBuf, ">"]
+                T.printf "Finalizing escape: %s\n" escSeq
+                handleDasherKeypress context' escSeq >>= streamKeysRec
 
-        -- On parse ok
-        Just key ->  do
-          T.printf "[EscapeMode] Processing text from dasher: %s\n" key
+              else do
+                T.printf "Caching keys: %s\n" key
+                streamKeysRec $ context' { escapeBuffer = escBuf <> key }
 
-          if key == "<udo>" then
-            if T.null escapeSeq then do
-              -- exit escape mode
-              T.printf "Aborting escape because of user undo!\n"
-              streamKeysRec context'
-            else do
-              -- Remove last character of escape seq
-              let newEscSeq = T.take (T.length escapeSeq - 1) escapeSeq
-              T.printf "[EscapeMode] Undoing (%s)\n" newEscSeq
-              streamWithEscape context' newEscSeq
-
-          else if key == ">" then do
-            let escapeSeq' = T.concat ["<", escapeSeq, ">"]
-
-            T.printf "Finalizing escape: %s\n" escapeSeq'
-            handleDasherKeypress context' escapeSeq' >>= streamKeysRec
-
-          else do
-            T.printf "Caching keys: %s\n" key
-            streamWithEscape context' $ escapeSeq <> key
+            -- Other modes are handled within `handleDasherKeypress`
+            _ -> 
+              if key == "<"
+                then do
+                  streamKeysRec $ context' { bufferMode = UseEscapeBuffer IgnoreBuffer
+                                           , escapeBuffer = T.empty }
+                else do
+                  handleDasherKeypress context' key >>= streamKeysRec
