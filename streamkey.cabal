@@ -36,6 +36,7 @@ library
     , break
     , exceptions
     , foldl
+    , ilist
     , lens
     , lens-regex-pcre
     , mtl
@@ -62,6 +63,7 @@ executable streamk
     , break
     , exceptions
     , foldl
+    , ilist
     , lens
     , lens-regex-pcre
     , mtl
@@ -88,6 +90,7 @@ test-suite streamkey-test
     , break
     , exceptions
     , foldl
+    , ilist
     , lens
     , lens-regex-pcre
     , mtl

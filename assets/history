@@ -6,40 +6,56 @@ iimport fileinput<cr><cr>def main():<cr>fileinput.input()<esc>I<wbf>next(<esc>A<
 iimport fileinput<cr>def main():<cr>fileinput.input()<esc>I<wbf>name = <esc>kA<wbf>)<esc>I<wbf><esc>wwwi<wbf>next(<esc>o<wbf><cr>print(f'{name}')<esc>k3kO<wbf><cr><esc>:wq<cr><wbf>python main.py <cr>
 iimport fileinput<cr><cr>def main():<cr>fileinput.input()<esc>I<wbf>next(<esc>A<wbf>)<esc>I<wbf>name = <esc>o<wbf><cr>print(f'{name}')<esc>4ko<wbf><esc>:wq<cr><wbf>python main.py<cr>
 checker():     
-map read<esc>A<wbf><esc>bi<wbf>solve 
-----
+map read<esc>A<wbf><esc>bi<wbf>solve
+---- 1
 <esc>bdwi<wbf><esc>bdwi<wbf>
-----
+---- 2
 àqfjoim<tab> D<tab>
-----
+---- 3
 gdgdgdIinp & <esc>àtt<wbf><esc><esc>
-----
+---- 4
 <esc>òq<wbf>àti<esc>k<wbf><cr>gd
-----
+---- 5
 òkiòk<c-d>
-----
+---- 6
 <c-d>òqi<esc>i<wbf>òqgukfz<esc>sws3w)<wbf>ffs2f)):w<cr>àtiàtt<esc>k<wbf><cr>òk<c-d>òq
-----
+---- 7
 àqfà
-----
+---- 8
 àttstack build<cr>
-----
+---- 9
 
-----
+---- 10
 òqàttstack build<cr>òk<c-d>òqàttstack build<cr>òk<c-d><c-d>òqjjjjfFCFunction<esc>àtt<wbf>
-----
+---- 11
 
-----
+---- 12
 
-----
+---- 13
 àttstack run<esc>bbi<wbf>s<cr><sm-u>òk<c-d><c-d>òq2kgjwwsw):w<cr>àtt<esc>k<cr><wbf>òk<c-d><c-d>òkòqF+c<esc>sw):w<cr><wbf><esc>:w<cr><wbf>àtt<esc>k<cr><wbf>òk<c-d><c-d><c-d>òqF(;,<esc>f)f)<wbf><esc>F(;i<wbf>map <esc>:w<cr>àtt<wbf><esc>k<cr><wbf>òq<esc>/un<cr><wbf>/unc<cr><wbf>nimap $ <esc>:w<cr>àtt<wbf><esc>k<cr><wbf>òk<c-d><c-d><c-u><c-d><c-d>òq<m-2>iread<cr><m-1>g<esc>i<wbf>e<esc>àqf<wbf><esc>gtgdgdgdgfr<wbf><esc>HGifrea<wbf> @Int<esc>:w<cr>àtt<wbf><esc>k<cr><wbf>òk<c-d><c-d>òq<esc>gtgO<wbf><esc>O<wbf><esc>ddddjàO<wbf><bs>lan<tab><cr>TypeApplications <bs>><esc>jddk:w<cr><wbf>àtt<esc>k<cr><wbf>òk<c-d><c-d>òq<esc>kf><wbf><esc>x:w<cr><esc>àtt<wbf>àtt<esc>k<cr><wbf>òk<c-d><c-d>òq<esc>:w<cr><wbf><esc>dap<wbf>k<esc>p<wbf><esc>dap<wbf><esc>kggP<wbf>àqf<esc>:w<cr>àtt<wbf><esc>k<cr><wbf>òk<c-d><c-d><c-u><c-d><c-d><c-d><c-d>òq<esc>Gff<wbf><esc>s3w) <wbf><esc>u<wbf><esc>s3W)<wbf><esc>Ea<wbf> $<esc>:w<cr>àtt<wbf><esc>k<cr><wbf>òk<c-d><c-d>
-----
+---- 14
 <esc><bfi>HG2WC<bfq>solve<esc><bfi>gtuàOsolve = <bfq>
-----
+---- 15
 
-----
+---- 16
 
-----
+---- 17
 stack build<cr>stack run<cr>
-----
+---- 18
 òFBBBi<bfq><bs><cr><esc>òF<bfi>jfpde<bfw>a<bfq> .<esc><bfi>:w<cr><bfw>àtt<bfw>k<bfq><bs><esc>k<cr>stack run<cr>import Adventofcode.com<cr><c-d>òq3kbC<bfq><esc><bfi>bi<bfq>inp <esc><bfi>A<bfq>zip inp inp filter <esc><bfi>ei<bfq>>2k<esc><bfi>u<bfw>4fp<bfw>a &<bfw><esc>A<bfq>((uncurry *++++<bs><bs><bs><bs><bs>+) >>> (==2020<esc><bfi>A<bfq><esc><bfi>2k<bfw>cc<bfq>import Control.Arrow<esc><bfi>2kj<bfw>wdw<bfw>b4W<bfw><bfi>b4W<bfw>k<bfw>4bW<bfw>bW<bfw>bW<bfw>bW<bfw>dw<bfw>f&<bfw>cw<bfq>>>><esc><bfi>:w:wq<cr><bfw>
+---- 19
+G<esc><bfi>xG<bfw>:w<cr><bfw>
+---- 20
+<esc><bfi>gg}<bfw>
+---- 21
+<esc><bfi>5j<bfw>
+---- 22
+main = do<cr> putStrLn "Hello world <esc><bfi>ggO<bfq><esc><bfi>O<bfq>solve = map read ["12", "33<esc><bfi>Fm<bfw>i<bfq>show $ <esc><bfi>Gyyp<bfw>WC<bfq>solve<esc><bfi> a<bfw><cr><bfw>àyyP<bfw>f=DC<bfq>:: String<esc><bfi>jj<bfw>bbK<bfw>K<bfw>ea <bfw>[Int]]<bfw><esc>Bi<bfq>@<esc><bfi>ggO<bfq><esc><bfi>O<bfq><esc><bfi>dddd<bfw>klangu<bfw><tab><cr><bfw><esc><bfi>jdd<bfw>k<bfw>EEE<bfw>a TypeApplications<bfw><esc><bfw>lx<bfw>àttt<bfw>stack build<bfw><cr><bfw>pyywd<cr><bfw>òq<bfi>w>
+---- 23
+imain = do<cr> putStrLn "Hello world<esc><bfi>ggO<bfq><esc><bfi>O<bfq>solve = map read ["12", "33", "57<esc><bfi>àttqf<bfw>Fm<bfw>i<bfq>show $ <esc><bfi>Aàtt<bfw>stack build<bfw><c-w><bfq>stack build<cr>ls<cr>pwd<cr>òq:pwd<cr>àttòq:w<cr>àttstack build<cr>òq<bfi>eaeeei<bfq><esc><bfi>eei<bfq>BBBi<bfq><esc><bfi>Bi<bfq>[Int] <esc><bfi>Bi<bfq>@<esc><bfi>:w<cr>àtt<bfw><bfq>stack build<cr>òq<bfi>O<bfq><esc><bfi>O<bfq>lang<tab><cr><esc><bfi>ijddk<bfw>EEa<bfq><esc>lliTypeApplications<esc>àttòq:w<cr>àttstack build<cr>stack run<cr>òq<bfi>Gi>q><bs><bs><bs>d<esc><bfi>o<bfq>solve <esc><bfi>:w<cr>àtt<bfq>stack build<cr>òq<bfi>Bi<bfq>putStrLn (<esc><bfi>:w<cr>àtt<bfw><bfq>stack build<cr>òkòqxàttòq:w<cr>àttstack build<cr>stack run<cr>
+---- 24
+imain =<cr> do putStrLn $ solve<esc><bfi>^dwk<bfw>A<bfq> do<esc><bfi>O<bfq><esc><bfi>O<bfq>solve = zip<bs><bs><bs><bs><bs>inp = zip inp inp & filter ((uncurry +) >>> (==2020)) & map (uncurry *)<esc><bfi>2kkjo<bfq>inp <lt>- getContents<esc><bfi>àF<bfq>àqfuI  <bs> <esc><bfi>àF<bfq>jA<bfq> $ read [Int]<esc><bfi>Bi<bfq>@<esc><bfi>A<bfq> $ lines $ inp<esc><bfi>ggO<bfq><esc><bfi>O<bfq>import Control.Arrow<esc><bfi>O<bfq>lang<tab><cr>TypeApplications<esc><bfi> a<bfw><cr><bfw>2k<bfw>yyP<bfw>WC<bfq>Data.Function<esc><bfi> a<bfq><cr>22><m-b><m- ><sm-H>ohoogle<cr>iControl.Arrows<m-1><esc><bfi>cxapf(.<bfw>f(<bfw>:;<bfw><cr><bfw>klcxa)<bfw>cxa)<bfw>F(<bfw>.<bfw>u<bfw>BdcW&<bfw><esc><bfi> a<bfq><esc><bfi> aaa<bfw><cr><bfw>f&cl.<bfw><esc><bfi> a<bfw><esc><bfi> a<bfw><cr><cr>bfw>
+---- 25
+<cr><esc><bfi>àqf<bfw>w<bfw>òàqf<bfw>àtt<bfw><bfq>ghci<cr>(uncurry +) (1, 7)<cr>:t uncurry<cr><esc>kk<cr>òq<bfi>f+sw)<bfw>hds)<bfw>f*sw)<bfw> a<bfq><cr><esc><bfi>^dcwprint<bfw><esc><bfi> a<cr><bfw><esc><bfi>u<bfw>fml<bfw>;<bfw>F[ds]<bfw>BBi<bfq>fmap (<esc><bfi>EEi<bfq><esc><bfi>la<bfq>)<esc><bfi>:w<cr>àtt<bfw><bfq>:q<cr>stack build<cr>stack run<cr>1<cr>2019<cr><c-d>òq2f$dw<esc><bfi>Aàqf<bfw>dw<bfw>s$)<bfw>f$sw><bfw>F$idw<bfw><m-2><bfw><c-w><c-w><bfw><bfq><c-w><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>combs<bs><bs><bs><bs><bs><bs>permutations<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>combinations<m-1><m-2><esc>O<bfq>haskell get combinations<cr>fls
+---- 26
+<esc><bfi> a<cr><bfw><cr><bfw>àqf<bfw>ea inp<bfw><esc>>:w<cr>àtt<bfw><esc>u<bfw>u<bfw>i inp<bfw><esc>:w<cr><bfw>àtt<bfw>stack build<cr><bfw>stack build<cr><bfw>stack run<cr><bfw>2019<cr>1<cr><c-d><bfw>òq<bfw>/zip<cr><bfw>cwliftA2 (,)<bfw><esc>:w<cr>àtt<bfw>stack build<cr><bfw>òk<bfw><c-d><bfw><m-2><m-b><bfw>ohoogle<cr><bfw>43k<bfw>2kj<bfw>yyp<bfw>fACApplicative<bfw><esc>:w<cr>àtt<bfw>stack build<cr><bfw>stack run<cr><bfw>stack run<cr><bfw>2019<cr>19<cr><bfw><c-d><bfw>òq<bfw>òq<bfw>iòq<bfw>:w<cr><bfw>:pwd<cr><bfw>àR<bfw>ih<bfw><esc>Cdassets<cr><bfw>Cd<bfw>assets<bfw><cr><bfw>ijlCf<bfw>test 1<cr><bfw>l<bfw>i2019<cr>1<bfw><esc>:w<cr><bfw>

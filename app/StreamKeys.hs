@@ -13,10 +13,12 @@ import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State.Strict
+import Control.Arrow
 import Control.Exception
 import Data.Functor ((<&>))
 import Data.Either
 import Data.List
+import Data.List.Index
 import Control.Break
 import System.IO hiding (BufferMode, Buffer)
 import GHC.Exts
@@ -30,6 +32,7 @@ import qualified Data.Vector as V
 import Control.Lens
 import qualified Control.Lens.Regex.Text as Re
 import Control.Lens.Regex.Text (regex)
+import qualified Control.Foldl as Fl
 import qualified Turtle as Sh
 
 import qualified XDoCom
@@ -212,19 +215,15 @@ handleDasherKeypress context key =
 
   T.printf "[%s] Handling key: %s\n" (show $ bufferMode context) key
 
-  let hist = history context
-      bsAmnt = bsAmount context
+  let hist    = history context
+      bsAmnt  = bsAmount context
       lastKey = head hist
+      bufMod  = bufferMode context
 
   if key == "<udo>"
     -- Handle dasher undo
     then
-      if lastKey == "<bs>"
-         then do
-           T.printf "[ERROR] CAN'T UNDO BACKSPACE! ALL UNDOS IGNORED UNTIL NON-BS KEY IS PRESSED!\n"
-           return context
-      
-      else if not $ null bsAmnt then do
+      if not $ null bsAmnt then do
         T.printf "Processing abnormal space amount specifier: %s\n" (show bsAmnt)
 
         if head  bsAmnt <= 0 then do
@@ -244,10 +243,18 @@ handleDasherKeypress context key =
 
       -- Add abnormal backspace amounts for escape codes
       else if isDasherEscapeSeq lastKey then do
+
         -- Only go back once for the whole escape sequence
-        context' <- pressDasherKey context "<bs>"
+        context' <-
+          if lastKey /= "<bs>" 
+             then pressDasherKey context "<bs>"
+             else do
+               T.printf "[ERROR] CAN'T UNDO BACKSPACE! ALL UNDOS IGNORED UNTIL NON-BS KEY IS PRESSED!\n"
+               return context -- Don't undo backspace with a backspace...
+
         -- NB. `removeLast` for going back removing whole escape seq
         return $ undoHistory context'{ bsAmount = -(T.length lastKey) + 2 : bsAmnt }
+
       else do
         pressDasherKey context "<bs>" <&> undoHistory
 
@@ -290,7 +297,7 @@ streamKeys = do
         (ConsumeBuffer nextMode) | V.null buf -> do
           lift $ T.printf "Buffer empty, accepting new events from stdin\n"
           put $ context { bufferMode = nextMode }
-          maybeNextEvent 
+          maybeNextEvent
 
         (ConsumeBuffer _) -> do
           put $ context { buffer = V.tail buf }
@@ -305,8 +312,24 @@ streamKeys = do
               Right line -> return $ T.pack line
               Left e -> do
                 -- Write history to file before exiting
+                lines <- fmap Sh.lineToText <$> Sh.reduce Fl.list (Sh.input "assets/history")
+
+                let linesN = length lines
+
+                let lastHistNumStr =
+                      flip execState T.empty $ 
+                        forM lines $
+                          (^? [regex|----\s+(\d+)|] . index 0 . Re.group 0) >>> mapM_ put
+
+                when (T.null lastHistNumStr) $
+                  error "Couldn't retrieve last history number"
+
+                let histNum = read @Int (T.unpack lastHistNumStr) + 1
+
+                T.printf "Writing history #[%d]\n" histNum
+                
                 outh <- openFile "assets/history" AppendMode
-                T.hPutStrLn outh "----"
+                hPutStrLn outh $ "---- " <> show histNum
                 T.hPutStrLn outh $ T.concat $ reverse $ history context
                 hClose outh
                 throw e
