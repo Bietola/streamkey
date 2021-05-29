@@ -46,17 +46,17 @@ data BufferMode =
   deriving (Eq, Show)
 
 data DasherContext =
-  DasherContext { history :: [Text]
-                , bsAmount :: [Int]
-                , bufferMode :: BufferMode
-                , buffer :: V.Vector Text
+  DasherContext { history      :: V.Vector Text
+                , buffer       :: V.Vector Text
+                , bufferMode   :: BufferMode
+                , bsAmount     :: [Int]
                 , escapeBuffer :: Text }
 
 defDasherContext =
-  DasherContext { history = []
-                , bsAmount = []
-                , bufferMode = IgnoreBuffer
-                , buffer = V.empty
+  DasherContext { history      = V.empty
+                , buffer       = V.empty
+                , bufferMode   = IgnoreBuffer
+                , bsAmount     = []
                 , escapeBuffer = T.empty }
 
 -- Get unicode escape code of given Text
@@ -144,6 +144,9 @@ handleDasherKeypress context key =
         FillBuffer ->
           return context
 
+        (UseEscapeBuffer _) ->
+          error "UseEscapeBuffer should not be handled here"
+
         -- TODO: Use https://wiki.haskell.org/MultiCase when available
         (ConsumeBuffer _) -> doPress
         IgnoreBuffer      -> doPress
@@ -162,31 +165,52 @@ handleDasherKeypress context key =
 
     undoHistory :: DasherContext -> DasherContext
     undoHistory context =
-      case bufferMode context of
-        IgnoreBuffer -> context { history = tail $ history context }
-        FillBuffer -> 
-          if V.null $ buffer context
-            then
-              -- TODO: Consider this instead?: context { bufferMode = IgnoreBuffer }
-              error "Buffer should not be empty here!"
-            else
-              context { buffer = V.init $ buffer context }
-        (ConsumeBuffer _) -> 
-          error "History should not be undone while consuming buffer!"
+      let bufMode = bufferMode context
+          buf     = buffer context
+          lastKey = V.last $ history context
+
+      in flip execState context do
+        case bufMode of
+          FillBuffer ->
+            if not $ V.null buf 
+               then put context { buffer = V.init $ buffer context }
+               else error "Buffer should not be empty here!" 
+          _ -> pure ()
+
+        case bufMode of
+          IgnoreBuffer -> do
+            ctx <- get
+            put ctx { history = V.init $ history context }
+          FillBuffer   -> do
+            ctx <- get
+            put ctx { history = V.init $ history context }
+          (ConsumeBuffer _) -> 
+            error "History should not be undone while consuming buffer!"
+          _ -> pure ()
+
+        -- Switch back to escape mode (TODO: Write better comment)
+        when (isDasherEscapeSeq lastKey) do
+          let escSeq = T.take (T.length lastKey - 1) lastKey
+          ctx <- get
+          put ctx { bufferMode = UseEscapeBuffer bufMode, escapeBuffer = escSeq }
 
     addToHistory :: DasherContext -> Text -> IO DasherContext
-    addToHistory context key =
+    addToHistory context key = do
+      let newHist = V.snoc (history context) key
+
       case bufferMode context of
+
         IgnoreBuffer ->
           -- Extend history
-          return $ context { history = key : history context }
+          return $ context { history = newHist }
+
         FillBuffer -> do
           -- Extend history *and* buffer
           let newBuffer = V.snoc (buffer context) key
           T.printf "[FillBuffer] Buffer: %s\n" (show newBuffer)
-          return $ context { history = key : history context
-                           , buffer = newBuffer }
-        -- NB. `ConsumeBuffer` does not fill history because `FillBuffer already does`
+          return $ context { history = newHist, buffer = newBuffer }
+
+        -- NB. `ConsumeBuffer` does not fill history because `FillBuffer` already does
         -- WARNING: This only works if no undo functionality is implemented in `ConsumeBuffer` mode!
         (ConsumeBuffer _) -> return context
 
@@ -224,7 +248,7 @@ handleDasherKeypress context key =
 
   let hist    = history context
       bsAmnt  = bsAmount context
-      lastKey = head hist
+      lastKey = V.head hist
       bufMod  = bufferMode context
 
   if key == "<udo>"
@@ -281,17 +305,8 @@ streamKeys = do
   streamKeysRec defDasherContext
 
   where
-    -- TODO: Remove the need for this with logging?
-    maybeParseKeyEvent :: Text -> IO () -> (Text -> IO ()) -> IO ()
-    maybeParseKeyEvent rawLine onFail onOk = 
-      case parseDasherKeyEvent rawLine of
-        Nothing -> do
-          T.printf "Ignoring invalid key event: %s (U%s)\n" rawLine (show $ encodeUnicode16 rawLine)
-          onFail
 
-        Just key -> onOk key
-
-    -- (mkey, context) <- runStateT nextEvent context
+    -- Use like this: `(mkey, context) <- runStateT nextEvent context`
     maybeNextEvent :: StateT DasherContext IO (Maybe Text)
     maybeNextEvent = do
       context <- get
@@ -337,7 +352,8 @@ streamKeys = do
                 
                 outh <- openFile "assets/history" AppendMode
                 hPutStrLn outh $ "---- " <> show histNum
-                T.hPutStrLn outh $ T.concat $ reverse $ history context
+                -- TODO: Check if using the correct foldl
+                T.hPutStrLn outh $ V.foldl' T.append T.empty $ history context
                 hClose outh
                 throw e
 
@@ -352,15 +368,15 @@ streamKeys = do
     streamKeysRec context = do
       (maybeKey, context') <- runStateT maybeNextEvent context
 
+      let bufMode = bufferMode   context'
+          escBuf  = escapeBuffer context'
+
       case maybeKey of
         -- on parse fail
         Nothing -> streamKeysRec context' 
 
         -- on parse ok
         Just key -> do
-          let bufMode = bufferMode   context'
-              escBuf  = escapeBuffer context'
-
           T.printf "[%s] Processing text from dasher: %s\n"(show bufMode) key
 
           case bufferMode context' of
@@ -379,9 +395,9 @@ streamKeys = do
                   streamKeysRec $ context' { escapeBuffer = newEscSeq }
 
               else if key == ">" then do
-                let escSeq = T.concat ["<", escBuf, ">"]
+                let escSeq    = T.concat ["<", escBuf, ">"]
                 T.printf "Finalizing escape: %s\n" escSeq
-                handleDasherKeypress context' escSeq >>= streamKeysRec
+                handleDasherKeypress (context' { bufferMode = nextBufMode }) escSeq >>= streamKeysRec
 
               else do
                 T.printf "Caching keys: %s\n" key
@@ -391,7 +407,7 @@ streamKeys = do
             _ -> 
               if key == "<"
                 then do
-                  streamKeysRec $ context' { bufferMode = UseEscapeBuffer IgnoreBuffer
+                  streamKeysRec $ context' { bufferMode = UseEscapeBuffer (bufferMode context')
                                            , escapeBuffer = T.empty }
                 else do
                   handleDasherKeypress context' key >>= streamKeysRec
